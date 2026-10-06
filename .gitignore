@@ -1,0 +1,14 @@
+node_modules/
+.vercel/
+.next/
+.next-qa/
+.data/
+.data-qa/
+artifacts/
+.env*
+!.env.example
+*.tsbuildinfo
+test-results/
+playwright-report/
+public/pdf.worker.min.mjs
+public/ocr/

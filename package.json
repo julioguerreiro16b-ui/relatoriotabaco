@@ -1,0 +1,7 @@
+{
+  "name": "hf-controle", "version": "1.0.0", "private": true,
+  "engines": { "node": "22.x" },
+  "scripts": { "dev": "next dev --hostname 127.0.0.1", "build": "next build", "start": "next start --hostname 127.0.0.1", "check": "tsc --noEmit", "test": "tsx --test tests/*.test.ts", "postinstall": "node scripts/assets.mjs" },
+  "dependencies": { "next": "latest", "react": "latest", "react-dom": "latest", "exceljs": "^4.4.0", "papaparse": "^5.5.3", "pdfjs-dist": "latest", "tesseract.js": "^6.0.1", "postgres": "^3.4.7", "zod": "^4.1.0", "lucide-react": "latest" },
+  "devDependencies": { "typescript": "^5.9.2", "@types/node": "^22.18.0", "@types/react": "^19.1.0", "@types/react-dom": "^19.1.0", "@types/papaparse": "^5.3.16", "tsx": "^4.20.0", "@playwright/test": "latest" }
+}

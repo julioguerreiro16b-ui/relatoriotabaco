@@ -1,0 +1,18 @@
+import { chromium } from '@playwright/test';
+import ExcelJS from 'exceljs';
+import assert from 'node:assert/strict';
+const base='http://127.0.0.1:3001';
+const workbook=new ExcelJS.Workbook(),sheet=workbook.addWorksheet('Resumo Mensal');
+sheet.addRow(['Rapé Seco',null,null,null,'Mapacho Rolls']);
+sheet.addRow(['Janeiro 2026',null,null,null,'Janeiro 2026']);
+sheet.addRow(['Estoque Inicial',100,220.462262185,null,'Estoque Inicial',30,66.1386786555]);
+sheet.addRow(['Estoque Final',99.25,218.8087952186125,null,'Estoque Final',29.8,65.69775413113]);
+sheet.addRow(['Saidas Atacado',.8,1.76369809748]);
+const form=new FormData();form.set('file',new File([await workbook.xlsx.writeBuffer()],'qa-history.xlsx'));form.set('source','history');
+const r=await fetch(base+'/api/import',{method:'POST',headers:{Origin:base},body:form});assert.equal(r.status,200);const imported=await r.json();assert.equal(imported.state.references.length,5);
+const browser=await chromium.launch({channel:'chrome',headless:true});const page=await browser.newPage({viewport:{width:1440,height:1100}});const errors=[];page.on('pageerror',e=>errors.push(e.message));
+await page.goto(base+'/#history');await page.getByRole('heading',{name:'Histórico original'}).first().waitFor();
+await page.getByText('Dados aceitos como corretos. Sem correção, recálculo ou verificação.',{exact:true}).waitFor();
+const response=await fetch(base+'/api/export?report=all&year=2026');const exported=new ExcelJS.Workbook();await exported.xlsx.load(Buffer.from(await response.arrayBuffer()));assert.equal(exported.worksheets.length,10);assert.equal(exported.getWorksheet('Conciliação histórica').rowCount,6);assert.ok(exported.getWorksheet('Original Resumo Mensal'));
+assert.equal(errors.length,0,errors.join('\n'));await page.screenshot({path:'artifacts/history-review-qa.png',fullPage:true});await browser.close();
+console.log('PASS: trusted historical import, original worksheet display and export without comparisons.');
