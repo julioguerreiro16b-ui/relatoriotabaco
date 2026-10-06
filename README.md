@@ -50,7 +50,7 @@ Em desenvolvimento, os dados ficam **no servidor**, em `.data/state.json`, com d
 
 Em produção, `DATABASE_URL` é obrigatório. A aplicação não permite usar disco temporário da Vercel como banco. PostgreSQL armazena o estado auditável e os arquivos privados; a atualização do estado usa transação e bloqueio de linha para impedir sobrescritas concorrentes. A versão enviada pelo cliente também é conferida. As entidades de documentos, produtos, movimentos, importações e correções são estruturas JSONB versionadas; não há tabelas relacionais independentes para cada entidade nesta versão. Essa solução destina-se inicialmente a um único espaço da empresa e volumes moderados. Para alto volume, evolua os repositórios para tabelas normalizadas e armazenamento privado de objetos.
 
-O armazenamento PostgreSQL está implementado, mas não foi conectado a uma conta online nesta entrega. Os testes de integração realizados utilizaram o repositório local isolado.
+O armazenamento PostgreSQL foi conectado ao Supabase com TLS verificado. Na publicação Vercel, foram conferidos o login, a leitura do estado copiado, o download protegido dos documentos, a exportação Excel com as abas históricas e a interface em tela de celular. Essa verificação não altera os dados nem recalcula o histórico. Os testes que criam registros fictícios continuam restritos ao repositório local isolado.
 
 ## Publicar com GitHub + Vercel + Supabase
 
