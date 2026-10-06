@@ -59,6 +59,7 @@ O armazenamento PostgreSQL está implementado, mas não foi conectado a uma cont
 3. Importe o repositório na Vercel como projeto Next.js. Use Node.js 22, `npm ci` e `npm run build`.
 4. Configure as variáveis da `.env.example` nas configurações do projeto:
    - `DATABASE_URL`: URL PostgreSQL do provedor, preferencialmente com pool e SSL.
+   - `DATABASE_SSL_CA`: conteúdo PEM do certificado raiz baixado em Database Settings no Supabase. Use `sslmode=verify-full` na URL; o servidor valida o certificado e o nome do banco. Aceita quebras de linha reais ou `\n`.
    - `APP_PASSWORD`: senha forte do espaço, com pelo menos 12 caracteres.
    - `SESSION_SECRET`: segredo aleatório de pelo menos 32 caracteres.
    - `APP_ORIGIN`: origem HTTPS exata da aplicação, sem barra final, por exemplo `https://seu-projeto.vercel.app`.

@@ -11,7 +11,10 @@ async function database() {
     if (process.env.NODE_ENV === 'production') throw new Error('Configure DATABASE_URL para armazenamento online antes de publicar.');
     return null;
   }
-  sqlClient ??= postgres(process.env.DATABASE_URL, { max: 3, idle_timeout: 20, connect_timeout: 15, prepare: false });
+  sqlClient ??= postgres(process.env.DATABASE_URL, {
+    max: 3, idle_timeout: 20, connect_timeout: 15, prepare: false,
+    ...(process.env.DATABASE_SSL_CA ? { ssl: { rejectUnauthorized: true, ca: process.env.DATABASE_SSL_CA.replace(/\\n/g, '\n') } } : {}),
+  });
   const sql = sqlClient;
   setup ??= (async () => {
     await sql.begin(async tx => {
