@@ -52,10 +52,10 @@ Em produção, `DATABASE_URL` é obrigatório. A aplicação não permite usar d
 
 O armazenamento PostgreSQL está implementado, mas não foi conectado a uma conta online nesta entrega. Os testes de integração realizados utilizaram o repositório local isolado.
 
-## Publicar com GitHub + Vercel
+## Publicar com GitHub + Vercel + Supabase
 
 1. Crie um repositório privado no GitHub e envie esta pasta. Não envie `.data`, `.env.local`, documentos de clientes, `node_modules` ou `.next`.
-2. Crie um PostgreSQL online e copie a URL com conexão segura oferecida pelo provedor. A conta deve poder criar as tabelas do arquivo `database/schema.sql`, ou execute o schema antes usando uma conta de migração.
+2. No projeto Supabase, abra **Connect → Transaction pooler** e use a URL exata apresentada, com a senha do banco e TLS. Essa conexão usa a porta 6543; o código já desativa prepared statements (`prepare: false`). Use a conta proprietária do banco: a inicialização cria as tabelas e ativa Row Level Security dentro de uma transação. As tabelas não têm políticas para clientes da API pública; o acesso ocorre pelo servidor autenticado da aplicação. Não use a chave pública `anon` como URL do banco. Referências: [conexão PostgreSQL](https://supabase.com/docs/guides/database/connecting-to-postgres) e [Row Level Security](https://supabase.com/docs/guides/database/postgres/row-level-security).
 3. Importe o repositório na Vercel como projeto Next.js. Use Node.js 22, `npm ci` e `npm run build`.
 4. Configure as variáveis da `.env.example` nas configurações do projeto:
    - `DATABASE_URL`: URL PostgreSQL do provedor, preferencialmente com pool e SSL.

@@ -14,9 +14,15 @@ async function database() {
   sqlClient ??= postgres(process.env.DATABASE_URL, { max: 3, idle_timeout: 20, connect_timeout: 15, prepare: false });
   const sql = sqlClient;
   setup ??= (async () => {
-    await sql`CREATE TABLE IF NOT EXISTS hf_state (id integer PRIMARY KEY CHECK (id=1), data jsonb NOT NULL, updated_at timestamptz NOT NULL DEFAULT now())`;
-    await sql`CREATE TABLE IF NOT EXISTS hf_documents (id uuid PRIMARY KEY, bytes bytea NOT NULL, created_at timestamptz NOT NULL DEFAULT now())`;
-    await sql`INSERT INTO hf_state(id,data) VALUES (1,${sql.json(emptyState() as never)}) ON CONFLICT DO NOTHING`;
+    await sql.begin(async tx => {
+      await tx`CREATE TABLE IF NOT EXISTS hf_state (id integer PRIMARY KEY CHECK (id=1), data jsonb NOT NULL, updated_at timestamptz NOT NULL DEFAULT now())`;
+      await tx`CREATE TABLE IF NOT EXISTS hf_documents (id uuid PRIMARY KEY, bytes bytea NOT NULL, created_at timestamptz NOT NULL DEFAULT now())`;
+      // Supabase exposes public tables through its Data API. These tables are server-only:
+      // no client policies; the database owner used by the backend retains direct access.
+      await tx`ALTER TABLE hf_state ENABLE ROW LEVEL SECURITY`;
+      await tx`ALTER TABLE hf_documents ENABLE ROW LEVEL SECURITY`;
+      await tx`INSERT INTO hf_state(id,data) VALUES (1,${tx.json(emptyState() as never)}) ON CONFLICT DO NOTHING`;
+    });
   })().catch(e => { setup = undefined; throw e; });
   await setup; return sql;
 }
