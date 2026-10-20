@@ -39,7 +39,7 @@ export interface ValidationRun {
 export interface State {
   version: number; initialized: boolean; documents: DocumentInfo[]; movements: Movement[];
   products: Product[]; audit: Audit[]; unavailable: Partial<Record<Source, boolean>>;
-  lossKeywords: string[]; storage?: 'local' | 'postgres';
+  lossKeywords: string[]; storage?: 'local' | 'postgres' | 'turso';
   references?:HistoricalReference[];
   lastValidation?:ValidationRun;
   importRulesVersion?:number;

@@ -1,6 +1,6 @@
 'use client';
 import { useCallback, useEffect, useState } from 'react';
-import { LayoutDashboard, Upload, ArrowUpRight, ArrowDownLeft, Scale, MapPin, CalendarRange, CircleAlert, Package, Plug, Settings as SettingsIcon, Download, ChevronDown, Menu, X, LogOut, LoaderCircle, CheckCircle2, Plus, ShieldCheck } from 'lucide-react';
+import { LayoutDashboard, Upload, ArrowUpRight, ArrowDownLeft, Scale, MapPin, CalendarRange, CircleAlert, Package, Plug, Settings as SettingsIcon, Download, ChevronDown, Menu, X, LogOut, LoaderCircle, CheckCircle2, Plus, ShieldCheck, BookOpen } from 'lucide-react';
 import { completeness, monthly } from '@/lib/domain';
 import { historyComparisons } from '@/lib/history';
 import { CATEGORIES, type Movement, type State } from '@/lib/model';
@@ -12,13 +12,15 @@ import { Products, Sources, Settings } from './settings';
 import { Empty, SourceDetail } from './shared';
 import HistoricalWorkbook from './historical-workbook';
 import FullValidation from './validation';
-type View='history'|'dashboard'|'import'|'outgoing'|'incoming'|'balance'|'florida'|'summary'|'review'|'products'|'sources'|'settings';
+import Manual from './manual';
+type View='history'|'dashboard'|'import'|'outgoing'|'incoming'|'balance'|'florida'|'summary'|'review'|'products'|'sources'|'settings'|'manual';
 const nav:{id:View;label:string;icon:typeof Upload;group?:string}[]=[
   {id:'history',label:'Histórico original',icon:CalendarRange},{id:'dashboard',label:'Dashboard',icon:LayoutDashboard},{id:'import',label:'Importar arquivos',icon:Upload},
   {id:'outgoing',label:'Saídas',icon:ArrowUpRight,group:'MOVIMENTAÇÕES'},{id:'incoming',label:'Entradas',icon:ArrowDownLeft},{id:'balance',label:'Balanço',icon:Scale},{id:'florida',label:'Vendas Flórida',icon:MapPin},{id:'summary',label:'Resumo mensal',icon:CalendarRange},
-  {id:'review',label:'Revisar dados',icon:CircleAlert,group:'CONFERÊNCIA'},{id:'products',label:'Produtos',icon:Package},{id:'sources',label:'Fontes de dados',icon:Plug},{id:'settings',label:'Configurações',icon:SettingsIcon}
+  {id:'review',label:'Revisar dados',icon:CircleAlert,group:'CONFERÊNCIA'},{id:'products',label:'Produtos',icon:Package},{id:'sources',label:'Fontes de dados',icon:Plug},{id:'settings',label:'Configurações',icon:SettingsIcon},
+  {id:'manual',label:'Manual de uso',icon:BookOpen,group:'AJUDA'}
 ];
-const headings:Record<View,[string,string]>={history:['Histórico original','Valores da planilha preservados e aceitos como corretos.'],dashboard:['Visão geral','Seu estoque e suas movimentações, com origem em cada número.'],import:['Importar dados para análise','Reúna os documentos e prepare uma base confiável para seus relatórios.'],outgoing:['Saídas','Vendas de atacado, sites e perdas, separadas por produto.'],incoming:['Entradas','Invoices e Entry Summaries vinculados à mesma movimentação.'],balance:['Balanço mensal','Acompanhe as entradas e saídas de cada produto.'],florida:['Vendas na Flórida','Confira as vendas por data, gramatura e endereço de entrega.'],summary:['Resumo mensal de estoque','Do saldo inicial ao fechamento, com rastreabilidade.'],review:['Revisar dados','Confira as pendências antes de incluir os registros nos cálculos.'],products:['Produtos e gramaturas','Um cadastro consistente para classificar as próximas importações.'],sources:['Fontes de dados','Organize a origem de cada documento e relatório.'],settings:['Configurações','Regras de classificação, armazenamento e histórico de alterações.']};
+const headings:Record<View,[string,string]>={manual:['Manual de uso','Passo a passo, imagens das telas e boas práticas para sua rotina.'],history:['Histórico original','Valores da planilha preservados e aceitos como corretos.'],dashboard:['Visão geral','Seu estoque e suas movimentações, com origem em cada número.'],import:['Importar dados para análise','Reúna os documentos e prepare uma base confiável para seus relatórios.'],outgoing:['Saídas','Vendas de atacado, sites e perdas, separadas por produto.'],incoming:['Entradas','Invoices e Entry Summaries vinculados à mesma movimentação.'],balance:['Balanço mensal','Acompanhe as entradas e saídas de cada produto.'],florida:['Vendas na Flórida','Confira as vendas por data, gramatura e endereço de entrega.'],summary:['Resumo mensal de estoque','Do saldo inicial ao fechamento, com rastreabilidade.'],review:['Revisar dados','Confira as pendências antes de incluir os registros nos cálculos.'],products:['Produtos e gramaturas','Um cadastro consistente para classificar as próximas importações.'],sources:['Fontes de dados','Organize a origem de cada documento e relatório.'],settings:['Configurações','Regras de classificação, armazenamento e histórico de alterações.']};
 export default function Workspace() {
   const [state,setState]=useState<State|null>(null),[view,setView]=useState<View>('import'),[filters,setFilters]=useState<Filters>(defaultFilters),[error,setError]=useState(''),[toast,setToast]=useState(''),[auth,setAuth]=useState(false),[password,setPassword]=useState(''),[mobile,setMobile]=useState(false),[origin,setOrigin]=useState<Movement|null>(null),[edit,setEdit]=useState<Movement|null>(null),[loading,setLoading]=useState(true);
   const reload=useCallback(async()=>{try{const r=await fetch('/api/state');const data=await r.json();if(r.status===401){setAuth(true);return;}if(!r.ok)throw new Error(data.error);setState(data);setAuth(false);}catch(e){setError((e as Error).message);}finally{setLoading(false);}},[]);
@@ -56,8 +58,9 @@ export default function Workspace() {
   {view==='products'&&<Products state={state} act={act}/>}
   {view==='sources'&&<Sources onImport={()=>navigate('import')}/>}
   {view==='settings'&&<Settings state={state} act={act}/>}
+  {view==='manual'&&<Manual onNavigate={navigate}/>}
   </>}
-  <footer className="page-footer"><span>H&F Trading Company</span><span>KG como referência · Dry Snuff e Mapacho sempre separados</span><span>{state.storage==='postgres'?'Armazenamento online':'Versão local'}</span></footer></main></div>
+  <footer className="page-footer"><span>H&F Trading Company</span><span>KG como referência · Dry Snuff e Mapacho sempre separados</span><span>{state.storage==='postgres'||state.storage==='turso'?'Armazenamento online':'Versão local'}</span></footer></main></div>
   {toast&&<div className="toast" role="status"><CheckCircle2 size={20}/>{toast}<button className="icon-button" onClick={()=>setToast('')} aria-label="Fechar aviso"><X size={16}/></button></div>}
   {error&&<div className="toast error" role="alert"><CircleAlert size={20}/>{error}<button className="icon-button" onClick={()=>setError('')} aria-label="Fechar erro"><X size={16}/></button></div>}
   {origin&&<SourceDetail m={origin} state={state} onClose={()=>setOrigin(null)}/>}{edit&&<EditMovement m={edit} state={state} act={act} onClose={()=>setEdit(null)}/>}

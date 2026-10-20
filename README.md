@@ -4,6 +4,23 @@ Aplicação web em português para analisar documentos, conciliar movimentaçõe
 
 ## Começar
 
+### Continuar em outro computador
+
+Clone o repositório e instale Node.js 22. Copie o arquivo privado `.env.local`
+para a raiz do projeto (ao lado de `package.json`) com `TURSO_DATABASE_URL` e
+`TURSO_AUTH_TOKEN`. Essas credenciais conectam ao mesmo banco já migrado; não
+execute uma nova migração para começar a desenvolver.
+
+```sh
+npm ci
+npm run dev
+```
+
+Abra http://127.0.0.1:3000. As alterações de dados usam o banco compartilhado no
+Turso. Para testes com dados fictícios, use outro banco ou um ambiente isolado.
+Não copie `VERCEL_OIDC_TOKEN`: ele é temporário e pertence à sessão da Vercel.
+Os arquivos `.env` e `.env.local` não devem ser enviados ao Git.
+
 Requer Node.js 22. Instale e execute:
 
 ```sh
@@ -46,9 +63,58 @@ Não há conectores automáticos ativos. `SourceAdapter` e `ManualUploadAdapter`
 
 ## Dados locais e produção
 
+### Migrar esta pasta para Turso
+
+Crie um banco **libSQL** no painel do Turso e um token de leitura e escrita.
+Configure na raiz do projeto, em `.env.local` (nunca no Git):
+
+```dotenv
+TURSO_DATABASE_URL=libsql://seu-banco-sua-organizacao.turso.io
+TURSO_AUTH_TOKEN=seu-token
+```
+
+Essas variáveis privadas do servidor têm prioridade sobre `DATABASE_URL`.
+Não use `NEXT_PUBLIC_`. Na Vercel, configure as mesmas variáveis e preserve
+`APP_PASSWORD`, `SESSION_SECRET` e `APP_ORIGIN`.
+
+Pare as gravações no aplicativo durante a transferência. O destino deve estar
+vazio e ainda não receber gravações. Execute com Node.js 22:
+
+```sh
+npm run db:turso:check
+npm run db:turso:migrate
+npm run db:turso:migrate -- --verify
+```
+
+A pré-verificação valida o JSON e tamanho/SHA-256 dos documentos sem enviar dados.
+A migração copia `.data/state.json` e os arquivos referenciados em `.data/documents`,
+cria backup em `.data/backups/turso-*` e confere os arquivos no destino antes de
+publicar o estado. Preserva a versão, auditoria e bytes originais dos documentos.
+O estado é JSON comprimido com gzip na coluna BLOB `hf_state.data`.
+O esquema está em `database/turso.sql`; `database/schema.sql` é para PostgreSQL.
+
+A transferência pode ser repetida se os dados forem idênticos. Dados diferentes
+no destino interrompem a operação, sem substituição automática. Uma falha pode
+deixar documentos já copiados, reaproveitados na próxima tentativa.
+Use `--verify` antes de retomar as gravações. `HF_LOCAL_DATA_DIR` seleciona outra
+pasta de origem. Esta migração não lê o PostgreSQL: se a instalação online tiver
+dados mais novos, exporte-os antes de trocar sua conexão.
+
+Para gerar uma cópia SQLite local, sem envio à nuvem:
+
+```sh
+npm run db:turso:migrate -- --output .data/hf-controle-turso.db
+```
+
+Após a conferência, reinicie o aplicativo. Configurações mostrará **Turso online**.
+As atualizações usam transações de escrita e checagem de versão. Falhas revertem
+a atualização. Referência: [SDK oficial](https://docs.turso.tech/sdk/ts/reference).
+
+### Armazenamento local e alternativa PostgreSQL
+
 Em desenvolvimento, os dados ficam **no servidor**, em `.data/state.json`, com documentos em `.data/documents`. O navegador não é o banco de dados. Essa pasta é ignorada pelo Git. Copie a pasta inteira para um backup local quando necessário.
 
-Em produção, `DATABASE_URL` é obrigatório. A aplicação não permite usar disco temporário da Vercel como banco. PostgreSQL armazena o estado auditável e os arquivos privados; a atualização do estado usa transação e bloqueio de linha para impedir sobrescritas concorrentes. A versão enviada pelo cliente também é conferida. As entidades de documentos, produtos, movimentos, importações e correções são estruturas JSONB versionadas; não há tabelas relacionais independentes para cada entidade nesta versão. Essa solução destina-se inicialmente a um único espaço da empresa e volumes moderados. Para alto volume, evolua os repositórios para tabelas normalizadas e armazenamento privado de objetos.
+Em produção, configure `TURSO_DATABASE_URL` e `TURSO_AUTH_TOKEN` ou a conexão PostgreSQL `DATABASE_URL`. A aplicação não permite usar disco temporário da Vercel como banco. PostgreSQL armazena o estado auditável e os arquivos privados; a atualização do estado usa transação e bloqueio de linha para impedir sobrescritas concorrentes. A versão enviada pelo cliente também é conferida. As entidades de documentos, produtos, movimentos, importações e correções são estruturas JSONB versionadas; não há tabelas relacionais independentes para cada entidade nesta versão. Essa solução destina-se inicialmente a um único espaço da empresa e volumes moderados. Para alto volume, evolua os repositórios para tabelas normalizadas e armazenamento privado de objetos.
 
 O armazenamento PostgreSQL foi conectado ao Supabase com TLS verificado. Na publicação Vercel, foram conferidos o login, a leitura do estado copiado, o download protegido dos documentos, a exportação Excel com as abas históricas e a interface em tela de celular. Essa verificação não altera os dados nem recalcula o histórico. Os testes que criam registros fictícios continuam restritos ao repositório local isolado.
 

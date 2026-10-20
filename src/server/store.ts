@@ -2,13 +2,14 @@ import { mkdir, readFile, writeFile, rename } from 'node:fs/promises';
 import path from 'node:path';
 import postgres from 'postgres';
 import { emptyState, type State } from '@/lib/model';
+import { tursoDatabase, readTursoState, updateTursoState, putTursoDocument, getTursoDocument } from './turso';
 const root = path.resolve(/*turbopackIgnore: true*/ process.cwd(), process.env.HF_LOCAL_DATA_DIR || '.data');
 const filename = path.join(root, 'state.json');
 let sqlClient: ReturnType<typeof postgres> | undefined;
 let setup: Promise<void> | undefined;
 async function database() {
   if (!process.env.DATABASE_URL) {
-    if (process.env.NODE_ENV === 'production') throw new Error('Configure DATABASE_URL para armazenamento online antes de publicar.');
+    if (process.env.NODE_ENV === 'production') throw new Error('Configure TURSO_DATABASE_URL e TURSO_AUTH_TOKEN ou DATABASE_URL para armazenamento online antes de publicar.');
     return null;
   }
   sqlClient ??= postgres(process.env.DATABASE_URL, {
@@ -34,6 +35,8 @@ async function localRead(): Promise<State> {
   catch(e) { if ((e as NodeJS.ErrnoException).code === 'ENOENT') return emptyState(); throw e; }
 }
 export async function readState(): Promise<State> {
+  const turso = await tursoDatabase();
+  if (turso) return readTursoState(turso);
   const sql = await database();
   if (sql) { const rows = await sql`SELECT data FROM hf_state WHERE id=1`; return { ...rows[0].data as State, storage:'postgres' }; }
   return { ...await localRead(), storage:'local' };
@@ -42,6 +45,8 @@ export async function readState(): Promise<State> {
 let queue: Promise<unknown> = Promise.resolve();
 export function updateState<T>(fn: (state:State) => T | Promise<T>, expectedVersion?: number): Promise<T> {
   const task = async () => {
+    const turso = await tursoDatabase();
+    if (turso) return updateTursoState(turso, fn, expectedVersion);
     const sql = await database();
     if (sql) return await sql.begin(async tx => {
       const rows = await tx`SELECT data FROM hf_state WHERE id=1 FOR UPDATE`;
@@ -61,6 +66,8 @@ export function updateState<T>(fn: (state:State) => T | Promise<T>, expectedVers
   const result = queue.then(task,task); queue = result.catch(() => {}); return result;
 }
 export async function putDocument(id:string, bytes:Buffer) {
+  const turso = await tursoDatabase();
+  if (turso) return putTursoDocument(turso, id, bytes);
   const sql = await database();
   if (sql) { await sql`INSERT INTO hf_documents(id,bytes) VALUES (${id},${bytes}) ON CONFLICT DO NOTHING`; return; }
   await mkdir(path.join(root,'documents'),{recursive:true});
@@ -68,6 +75,8 @@ export async function putDocument(id:string, bytes:Buffer) {
 }
 export async function getDocument(id:string): Promise<Buffer> {
   if (!/^[a-f0-9-]{36}$/i.test(id)) throw new Error('Documento inválido');
+  const turso = await tursoDatabase();
+  if (turso) return getTursoDocument(turso, id);
   const sql = await database();
   if (sql) { const rows = await sql`SELECT bytes FROM hf_documents WHERE id=${id}`; if (!rows[0]) throw new Error('Documento não encontrado'); return rows[0].bytes; }
   return readFile(path.join(root,'documents',id));
