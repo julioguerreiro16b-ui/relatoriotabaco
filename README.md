@@ -6,7 +6,7 @@ Aplicação web em português para analisar documentos, conciliar movimentaçõe
 
 ### Continuar em outro computador
 
-Clone o repositório e instale Node.js 22. Copie o arquivo privado `.env.local`
+Clone o repositório e instale Node.js 22. Copie o arquivo privado `.env`
 para a raiz do projeto (ao lado de `package.json`) com `TURSO_DATABASE_URL` e
 `TURSO_AUTH_TOKEN`. Essas credenciais conectam ao mesmo banco já migrado; não
 execute uma nova migração para começar a desenvolver.
@@ -19,7 +19,7 @@ npm run dev
 Abra http://127.0.0.1:3000. As alterações de dados usam o banco compartilhado no
 Turso. Para testes com dados fictícios, use outro banco ou um ambiente isolado.
 Não copie `VERCEL_OIDC_TOKEN`: ele é temporário e pertence à sessão da Vercel.
-Os arquivos `.env` e `.env.local` não devem ser enviados ao Git.
+O arquivo `.env` não deve ser enviado ao Git.
 
 Requer Node.js 22. Instale e execute:
 
@@ -30,7 +30,7 @@ npm run dev
 
 Abra http://127.0.0.1:3000. Neste computador, também é possível executar `iniciar.ps1` pelo PowerShell. O script procura o Node instalado e o runtime disponível na pasta `.tools` do diretório pai.
 
-A aplicação abre em **Importar dados para análise**, sem registros de demonstração. Envie os arquivos ou marque **Arquivo não disponível**, informe o estoque inicial se ele não existir no histórico e confira o checklist. O processamento encaminha registros duvidosos para **Revisar dados**. Somente registros confirmados participam dos relatórios. O pacote de código não inclui documentos privados.
+A aplicação abre em **Importar dados → Vendas dos sites**, com captura automática do WooCommerce. A aba **Outros documentos** concentra uploads e o checklist manual. As lojas não exigem arquivos nem bloqueiam o processamento dos documentos complementares. O estoque inicial fica em uma seção recolhida e só é necessário para balanço e estoque. O processamento encaminha registros duvidosos para **Revisar dados**. Somente registros confirmados participam dos relatórios. O pacote de código não inclui documentos privados.
 
 ## O que está implementado
 
@@ -59,14 +59,14 @@ Estados de entrega americanos são exibidos em siglas; estado ausente fica “N�
 
 As novas vendas da Flórida sem quantidade/gramatura ficam sinalizadas e não entram no total calculado por embalagem. Resumo e balanço mantêm a integridade do estoque completo; filtros por cliente, estado, site, canal e origem se aplicam às tabelas de movimentações e Flórida. Produtos ignorados no cadastro não geram movimento confirmado.
 
-Não há conectores automáticos ativos. `SourceAdapter` e `ManualUploadAdapter` definem o contrato para conectar fontes futuras quando suas APIs e permissões forem conhecidas. Não foram inventados acessos a Sacred, Haux Haux ou Natural Medicine.
+O conector WooCommerce está implementado para Sacred, Haux Haux e Natural Medicine; a captura real depende das URLs e chaves de leitura configuradas no servidor. Os demais documentos continuam por upload manual. Nenhum acesso de loja foi presumido.
 
 ## Dados locais e produção
 
 ### Migrar esta pasta para Turso
 
 Crie um banco **libSQL** no painel do Turso e um token de leitura e escrita.
-Configure na raiz do projeto, em `.env.local` (nunca no Git):
+Configure na raiz do projeto, em `.env` (nunca no Git):
 
 ```dotenv
 TURSO_DATABASE_URL=libsql://seu-banco-sua-organizacao.turso.io
@@ -120,7 +120,7 @@ O armazenamento PostgreSQL foi conectado ao Supabase com TLS verificado. Na publ
 
 ## Publicar com GitHub + Vercel + Supabase
 
-1. Crie um repositório privado no GitHub e envie esta pasta. Não envie `.data`, `.env.local`, documentos de clientes, `node_modules` ou `.next`.
+1. Crie um repositório privado no GitHub e envie esta pasta. Não envie `.data`, `.env`, documentos de clientes, `node_modules` ou `.next`.
 2. No projeto Supabase, abra **Connect → Transaction pooler** e use a URL exata apresentada, com a senha do banco e TLS. Essa conexão usa a porta 6543; o código já desativa prepared statements (`prepare: false`). Use a conta proprietária do banco: a inicialização cria as tabelas e ativa Row Level Security dentro de uma transação. As tabelas não têm políticas para clientes da API pública; o acesso ocorre pelo servidor autenticado da aplicação. Não use a chave pública `anon` como URL do banco. Referências: [conexão PostgreSQL](https://supabase.com/docs/guides/database/connecting-to-postgres) e [Row Level Security](https://supabase.com/docs/guides/database/postgres/row-level-security).
 3. Importe o repositório na Vercel como projeto Next.js. Use Node.js 22, `npm ci` e `npm run build`.
 4. Configure as variáveis da `.env.example` nas configurações do projeto:
@@ -160,3 +160,24 @@ npm run build
 O script `browser-check.mjs` usa Chrome headless para verificar a interface em http://127.0.0.1:3000. `integration-check.mjs` exige uma instância isolada vazia na porta 3001, com `HF_LOCAL_DATA_DIR=.data-qa` e `HF_BUILD_DIR=.next-qa`; ele importa dados fictícios e testa fluxo completo, Excel, PDF textual e OCR. Nunca aponte esse teste para dados reais.
 
 WebMCP é opcional e detectado pelo navegador: as ferramentas expostas apenas consultam o estado da importação e abrem sua tela. Não enviam arquivos nem concluem o processamento. A validação em um navegador com suporte nativo ao WebMCP não estava disponível nesta entrega.
+
+## Saídas WooCommerce e relatórios por tamanho
+
+Na tela **Importar dados → Vendas dos sites**, escolha o período e clique em **Importar dos sites**. Cada loja configurada é consultada separadamente; falhas deixam a loja pendente e preservam o último resultado. Uma consulta completa sem pedidos também registra a captura. O checklist mantém o envio manual dos demais documentos.
+
+- **A · Flórida por tamanho:** todas as vendas destinadas à Flórida; Awiry e Tobacco Free não são excluídos deste recorte.
+- **B · EUA por tamanho:** todos os estados, incluindo Flórida; exclui Awiry e Tobacco Free (também identificados como sem tabaco).
+- Rapés e mapachos são separados. Tipos, variedades e lojas são somados por tamanho em gramas. Os relatórios incluem vendas confirmadas de arquivos manuais, mas não entradas, perdas ou totais históricos agregados.
+- Cada tela e exportação informa pendências e cobertura. Não é necessário informar estoque inicial para consultar ou exportar A e B. Filtros de outras telas, como estado ou canal, não limitam esses dois recortes.
+
+Configure WC_SACRED_URL/KEY/SECRET, WC_HAUX_URL/KEY/SECRET e WC_NATURAL_URL/KEY/SECRET conforme .env.example. Use a URL HTTPS da loja, sem /wp-json, e uma chave criada em **WooCommerce → Configurações → Avançado → REST API**, com permissão **Leitura**. As credenciais são usadas somente pelo servidor em cabeçalho de autorização; não são persistidas no estado, nos arquivos ou no navegador. O conector executa somente GET na loja.
+
+O período usa **a data de criação do pedido no fuso da loja**, com padrão de status **processando e concluído** e opção de restringir a **somente concluído**. Não é uma comprovação física de expedição. O destino é o endereço de entrega; cobrança não é usada como alternativa. São guardados apenas itens, identificadores, quantidades e país/estado, sem nomes, endereços completos ou valores financeiros. Tamanhos vêm do cadastro por SKU, nome do item ou metadados de variação com unidade explícita; o peso de frete do catálogo não é usado como gramatura.
+
+Reembolsos com quantidades vinculadas ao item reduzem as unidades. Reembolsos sem itens identificados ficam para revisão. Reimportar o período atualiza cancelamentos, quantidades e devoluções sem duplicar loja/pedido/item. Alterações de origem após correção ou conciliação manual voltam para revisão. Produtos desconhecidos também exigem classificação no cadastro. A identificação Awiry/Tobacco Free considera nome, SKU e categorias do catálogo.
+
+A consulta busca todas as páginas (até 200 de 100 registros) e tem limite de 45 segundos por loja, dentro da rota de 60 segundos. Divida períodos grandes quando necessário. Uma falha antes da conclusão não publica resultados parciais. Capturas concorrentes usam controle de versão. As capturas em JSON, sem credenciais, ficam disponíveis como documentos protegidos para rastreabilidade. Novas alterações na loja exigem nova captura do período.
+
+Referência da integração: [WooCommerce REST API v3](https://woocommerce.github.io/woocommerce-rest-api-docs/).
+
+Os testes de regras estão em tests/woocommerce.test.ts. A verificação de navegador scripts/woocommerce-browser-check.mjs usa exclusivamente a prévia isolada na porta 3003, com dados fictícios (Flórida: 7 unidades de 10g; EUA: 5 unidades de 10g e 2 mapachos de 250g). As chamadas de importação no navegador são simuladas; a captura real não foi testada sem as credenciais das lojas.

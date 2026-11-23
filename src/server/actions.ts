@@ -1,3 +1,4 @@
+import { clearDocuments } from './clear-documents';
 import { normalizeState } from '@/lib/shipping';
 import { kgFromUnits } from '@/lib/weights';
 import { trustedReference } from '@/lib/historical-policy';
@@ -5,7 +6,7 @@ import { randomUUID } from 'node:crypto';
 import { z } from 'zod';
 import { baseIssues, matching, norm, reconcile } from '@/lib/domain';
 import { fresh } from '@/lib/parsers';
-import { SOURCES, type Movement, type State, type Category, type Audit } from '@/lib/model';
+import { MANUAL_SOURCES, SOURCES, type Movement, type State, type Category, type Audit } from '@/lib/model';
 function audit(s:State, action:string,target:string,reason:string,before?:unknown,after?:unknown) { s.audit.push({id:randomUUID(),at:new Date().toISOString(),action,target,reason,before:structuredClone(before),after:structuredClone(after)}); }
 const text = z.string().max(2000);
 const editSchema = z.object({date:text,invoice:text,order:text,customer:text,recipient:text,state:text,shippingCountry:text.optional(),address:text,category:z.enum(['DRY_SNUFF','MAPACHO','']),kind:z.enum(['OPENING_STOCK','ENTRY','WHOLESALE_SALE','SITE_SALE','LOSS','MANUAL_ADJUSTMENT']),kg:z.number().finite().nullable(),sku:text,product:text,quantity:z.number().nonnegative().nullable(),unitGrams:z.number().positive().nullable(),site:text,transport:text,cargo:text,country:text,amount:z.number().nullable(),note:z.string().max(15000)});
@@ -14,13 +15,15 @@ export function action(state: State, payload: Record<string,unknown>) {
   const type = z.string().parse(payload.action);
   const target=state.movements.find(m=>m.id===payload.id);
   if(target?.historical&&['edit','ignore','distinct','merge'].includes(type))throw new Error('Histórico aceito como original; alterações desativadas.');
-  if (type === 'checklist') {
+  if (type === 'clear_documents') {
+    clearDocuments(state, payload);
+  } else if (type === 'checklist') {
     const unavailable = z.record(z.string(),z.boolean()).parse(payload.unavailable);
     const before = state.unavailable; state.unavailable = unavailable;
     audit(state,'Checklist','fontes','Disponibilidade informada pelo usuário',before,unavailable);
   } else if (type === 'commit') {
     if (!payload.confirmed) throw new Error('Confirme o checklist antes de processar.');
-    for(const source of SOURCES.filter(s=>s.required)) if(!state.documents.some(d=>d.source===source.key) && !state.unavailable[source.key]) throw new Error(`Envie ${source.label} ou marque Arquivo não disponível.`);
+    for(const source of MANUAL_SOURCES.filter(s=>s.required)) if(!state.documents.some(d=>d.source===source.key) && !state.unavailable[source.key]) throw new Error(`Envie ${source.label} ou marque Arquivo não disponível.`);
     let count=0;
     for (const m of state.movements.filter(m=>m.status==='staged')) { m.status=m.issues.length?'pending':'accepted'; count++; }
     state.initialized=true; audit(state,'Processamento','lote',`${count} registros analisados; pendências excluídas dos cálculos`);

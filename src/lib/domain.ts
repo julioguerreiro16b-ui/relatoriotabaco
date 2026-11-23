@@ -18,11 +18,12 @@ export function baseIssues(m: Movement): string[] {
   if (m.kg === null || !Number.isFinite(m.kg) || (m.kg < 0 && m.kind !== 'MANUAL_ADJUSTMENT')) issues.push('Peso não identificado ou inválido');
   if (!['OPENING_STOCK', 'MANUAL_ADJUSTMENT'].includes(m.kind)) {
     if (!m.invoice && !m.order) issues.push('Invoice ou pedido não identificado');
-    if (!m.recipient) issues.push('Destinatário não identificado');
+    if (!m.recipient && !m.woo) issues.push('Destinatário não identificado');
   }
   if (m.originalLb !== undefined && m.kg !== null && Math.abs(m.originalLb - lb(m.kg)) > 0.005) issues.push('Peso KG/LB inconsistente; confirmar KG como referência');
   if (m.quantity !== null && m.unitGrams !== null && m.kg !== null && Math.abs(m.kg - m.quantity * m.unitGrams / 1000) > 0.000001) issues.push('Peso difere de quantidade × gramatura');
   if (m.kind === 'SITE_SALE' && (!m.quantity || !m.unitGrams)) issues.push('Quantidade ou gramatura não identificada');
+  if (m.woo && (!m.shippingCountry || (m.shippingCountry === 'US' && normalizeState(m.state,m.shippingCountry) === 'Não identificado'))) issues.push('Conferir país/estado de entrega ausente');
   if (m.kind === 'ENTRY') {
     if (!m.origins.some(o => o.source === 'entry')) issues.push('Invoice sem Entry Summary');
     if (!m.origins.some(o => ['incoming', 'history'].includes(o.source))) issues.push('Entry Summary sem Invoice');
@@ -32,6 +33,8 @@ export function baseIssues(m: Movement): string[] {
 const sale = (m: Movement) => ['WHOLESALE_SALE', 'SITE_SALE', 'LOSS'].includes(m.kind);
 export function matching(a: Movement, b: Movement): 'exact' | 'possible' | null {
   if(a.historical&&b.historical)return null;
+  if(a.woo && b.woo && (a.woo.store !== b.woo.store || a.woo.orderId !== b.woo.orderId || a.woo.itemId !== b.woo.itemId)) return null;
+  if(a.kind === 'SITE_SALE' && b.kind === 'SITE_SALE' && a.site && b.site && a.site !== b.site) return null;
   if (a.id === b.id || a.category !== b.category || a.status === 'ignored' || a.status === 'duplicate' || a.distinctFrom?.includes(b.id) || b.distinctFrom?.includes(a.id)) return null;
   if ((a.kind === 'ENTRY') !== (b.kind === 'ENTRY') || (sale(a) !== sale(b))) return null;
   if (a.kind === 'OPENING_STOCK' || b.kind === 'OPENING_STOCK') return a.kind === b.kind ? 'possible' : null;

@@ -1,5 +1,7 @@
 node_modules/
 .npm-cache/
+.git/
+.vercel/
 .next/
 .next-qa/
 .data/
@@ -10,6 +12,5 @@ artifacts/
 *.tsbuildinfo
 test-results/
 playwright-report/
-tests/
 public/pdf.worker.min.mjs
 public/ocr/

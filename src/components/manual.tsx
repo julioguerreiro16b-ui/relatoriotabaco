@@ -7,16 +7,17 @@ import './manual.css';
 type Destination = 'import' | 'review' | 'summary' | 'history' | 'products' | 'settings';
 const guides: { id: string; title: string; screen: Destination; image?: string; caption?: string; steps: string[]; tip: string }[] = [
   { id: 'preparar', title: '1. Organize os documentos', screen: 'import', steps: [
-    'Separe os arquivos por período e origem: histórico, saídas, entradas, Entry Summary, sites, perdas e cadastro de produtos.',
+    'Separe os arquivos por período e origem: histórico, saídas de atacado, entradas, Entry Summary, perdas e cadastro de produtos.',
     'Use XLSX, CSV ou PDF, com até 3 MB por arquivo. PDFs podem ter até 40 páginas. Prefira arquivos legíveis e planilhas com cabeçalhos claros.',
-    'Em Importar arquivos, baixe o Modelo de movimentações ou o Modelo de produtos quando precisar montar uma planilha.',
+    'Em Importar dados → Outros documentos, baixe o Modelo de movimentações ou o Modelo de produtos quando precisar montar uma planilha.',
   ], tip: 'Mantenha os originais em uma pasta por mês. Use nomes como 2026-10_entradas_invoice-001.pdf para localizar a origem depois.' },
-  { id: 'importar', title: '2. Importe e confira o checklist', screen: 'import', image: 'importar', caption: 'Selecione a origem à esquerda e acompanhe as fontes no checklist à direita.', steps: [
-    'Selecione a origem antes de clicar em Selecionar arquivos ou arrastar os documentos para a área de envio.',
+  { id: 'importar', title: '2. Capture os sites e importe documentos', screen: 'import', image: 'importar', caption: 'A aba Vendas dos sites captura o WooCommerce; Outros documentos reúne o envio manual e seu checklist.', steps: [
+    'Na aba Vendas dos sites, selecione o período e clique em Importar dos sites. O padrão inclui pedidos processando e concluídos.',
+    'Para invoices, histórico e demais arquivos, abra Outros documentos e selecione o tipo antes de enviar.',
     'Aguarde a análise. Arquivos idênticos já recebidos são identificados; confira a mensagem antes de tentar reenviar.',
-    'No checklist, envie cada fonte obrigatória ou marque Arquivo não disponível quando ela realmente estiver ausente. Isso indica que o relatório pode estar incompleto.',
+    'No checklist manual, envie cada documento obrigatório ou marque Não disponível neste envio quando ela realmente estiver ausente. Isso indica que o relatório pode estar incompleto.',
     'Informe o estoque inicial por produto somente quando ele não estiver no histórico. Use o saldo no início da data de referência e registre a origem da contagem.',
-    'Clique em Conferir checklist e continuar, confira a lista e confirme Processar dados recebidos.',
+    'Clique em Conferir e processar documentos, confira a lista e confirme Processar documentos. As capturas das lojas são processadas automaticamente.',
   ], tip: 'Importar não significa confirmar: registros duvidosos seguem para Revisar dados antes de entrar nos cálculos.' },
   { id: 'revisar', title: '3. Revise e concilie', screen: 'review', image: 'revisar', caption: 'A revisão reúne os registros e suas pendências para conferência.', steps: [
     'Abra Revisar dados e confira os motivos de cada pendência. Compare data, produto, quantidade, gramatura, peso e destino com o documento.',
@@ -45,7 +46,7 @@ export default function Manual({ onNavigate }: { onNavigate: (view: Destination)
   return <div className="manual">
     <section className="manual-hero">
       <BookOpen size={34} aria-hidden="true" />
-      <div><span className="eyebrow">GUIA PRÁTICO · H&F</span><h2>Do primeiro arquivo ao fechamento do mês</h2><p>Um passo a passo para manter documentos, estoque e relatórios organizados. As imagens mostram telas do sistema com dados demonstrativos.</p></div>
+      <div><span className="eyebrow">GUIA PRÁTICO · H&F</span><h2>Da captura das vendas ao fechamento do mês</h2><p>Um passo a passo para manter documentos, estoque e relatórios organizados. As imagens mostram telas do sistema com dados demonstrativos.</p></div>
     </section>
     <nav className="manual-index" aria-label="Seções do manual" onClick={event => {
       const target = (event.target as HTMLElement).closest('a');

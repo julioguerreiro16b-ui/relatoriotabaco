@@ -1,3 +1,4 @@
+import { salesBySize } from './sales';
 import { CATEGORIES, CATEGORY_LABEL, KIND_LABEL, MONTHS, type State, type Movement, type Category } from './model';
 import { completeness, isFlorida, lb, monthly, monthlyLb, movementLb, type MonthlyMetric } from './domain';
 import { normalizeState } from './shipping';
@@ -29,9 +30,12 @@ export function buildReports(state:State,f:Filters):Record<string,Report> {
     const b=row.balanceOriginal;reports.balance.rows.push(b?[CATEGORY_LABEL[cat],row.month,b.entries,b.entriesLb,b.outgoing,b.outgoingLb,b.balance,b.balanceLb]:[CATEGORY_LABEL[cat],row.month,row.entries,lb(row.entries),out,lb(out),row.entries-out,lb(row.entries-out)]);
     reports.summary.rows.push([CATEGORY_LABEL[cat],row.month,...(['opening','entries','wholesale','sites','losses','adjustments','closing'] as MonthlyMetric[]).flatMap(key=>[row[key],monthlyLb(row,key)]),row.historical?'Histórico original aceito':row.partial?'Período parcial: contagem dentro do mês':row.closing===null?'Estoque inicial não confirmado':row.closing<0?'ESTOQUE NEGATIVO':'']);
   }
-  const sizes=['500g','250g','100g','5g','10g','20g','50g','10g - Haux','20g - Haux'];
-  for(const cat of cats)for(const r of floridaRows(moves,cat))for(const size of Object.keys(r.units))if(!sizes.includes(size))sizes.push(size);
-  reports.florida={title:'Vendas Flórida',columns:['Produto','Data',...sizes,'KG por gramatura','LB por gramatura','Registros sem gramatura'],rows:cats.flatMap(cat=>floridaRows(moves,cat).map(r=>[CATEGORY_LABEL[cat],r.date,...sizes.map(s=>r.units[s]||0),r.kg,lb(r.kg),r.missing]))};
+  const salesMoves=filtered(state.movements,{...defaultFilters,year:f.year,month:f.month,category:f.category});
+  for(const scope of ['florida','usa'] as const) {
+    const data=salesBySize(salesMoves,scope);
+    reports[scope]={title:scope==='florida'?'A - Florida por tamanho':'B - EUA por tamanho',columns:['Produto','Tamanho g','Unidades','KG','LB','Itens de venda'],rows:data.rows.map(r=>[CATEGORY_LABEL[r.category],r.grams,r.units,r.kg,lb(r.kg),r.records.length])};
+  }
+  reports.sales_rules={title:'Regras vendas por tamanho',columns:['Regra','Descrição'],rows:[['A — Flórida','Todas as vendas destinadas à Flórida, por tamanho.'],['B — EUA','Todos os EUA, incluindo Flórida; exclui Awiry e Tobacco Free.'],['Produtos','Rapés e mapachos separados, somando variedades dentro de cada tamanho.'],['WooCommerce','Período pela criação do pedido no fuso da loja; quantidades líquidas de reembolsos identificados.'],['Pendências','Itens sem tamanho, classificação, destino ou confirmação ficam fora dos totais.'],...(state.wooSyncs||[]).map(r=>[r.source,r.start+' a '+r.end+'; status '+r.statuses.join(', ')+'; atualizado em '+r.at])]};
   reports.review={title:'Revisar Dados',columns:['Produto','Data','Invoice/Pedido','Cliente','KG','Status','Problemas','Arquivo','Registro'],rows:state.movements.filter(m=>m.status!=='accepted').filter(m=>!f.status||f.status===m.status).map(m=>[m.category?CATEGORY_LABEL[m.category]:'Não classificado',m.date,m.invoice||m.order,m.customer,m.kg,({pending:'Pendente',staged:'Aguardando processamento',ignored:'Ignorado',duplicate:'Conciliado'} as Record<string,string>)[m.status],m.issues.join('; '),m.origins.map(o=>o.file).join('; '),m.id])};
   const negative=cats.flatMap(cat=>monthly(state,cat,f.year).filter(r=>!r.historical&&r.closing!==null&&r.closing<0).map(r=>`${CATEGORY_LABEL[cat]} ${r.month}: estoque negativo`));
   reports.audit={title:'Auditoria',columns:['Data','Ação','Registro','Motivo','Antes','Depois'],rows:state.audit.map(a=>[a.at,a.action,a.target,a.reason,JSON.stringify(a.before)||'',JSON.stringify(a.after)||''])};

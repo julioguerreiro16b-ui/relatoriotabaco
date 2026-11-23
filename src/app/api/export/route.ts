@@ -1,12 +1,14 @@
+import { salesCover } from '@/lib/sales-cover';
 import ExcelJS from 'exceljs';
 import { guard, failure } from '@/server/auth';
 import { readState } from '@/server/store';
 import { buildReports, defaultFilters, type Filters } from '@/lib/reports';
 export async function GET(request:Request){try{
-  await guard(request);const state=await readState();if(!state.initialized)throw new Error('Confirme a análise dos arquivos antes de gerar relatórios.');
+  await guard(request);const state=await readState();if(!state.initialized&&!['florida','usa'].includes(new URL(request.url).searchParams.get('report')||''))throw new Error('Confirme a análise dos arquivos antes de gerar relatórios.');
   const url=new URL(request.url),f={...defaultFilters,...Object.fromEntries(url.searchParams),year:Number(url.searchParams.get('year')||2026)} as Filters;
   const reports=buildReports(state,f), selected=url.searchParams.get('report')||'all',format=url.searchParams.get('format')||'xlsx';
   if(selected!=='all'&&!reports[selected])throw new Error('Relatório inválido');
+  if(selected==='florida'||selected==='usa') reports.cover=salesCover(state,f,selected);
   const chosen=selected==='all'?Object.values(reports):[reports[selected]];
   const safe=(v:unknown)=>typeof v==='string'&&/^[=+\-@\t\r]/.test(v)?"'"+v:v;
   if(format==='csv') {

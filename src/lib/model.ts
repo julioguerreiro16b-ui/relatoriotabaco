@@ -11,7 +11,10 @@ export interface Movement {
   origins: Origin[]; importedAt: string; status: Status; issues: string[];
   duplicateOf?: string; relatedId?: string; historical: boolean; note: string;
   originalLb?: number; distinctFrom?: string[]; shippingCountry?:string;
+  woo?: { store: WooSource; orderId: number; itemId: number; fingerprint: string; nationalExcluded: boolean; inactive?: boolean };
 }
+export type WooSource = 'sacred' | 'haux' | 'natural';
+export interface WooSync { source: WooSource; start: string; end: string; at: string; documentId: string; orders: number; items: number; pending: number; statuses: string[] }
 export interface DocumentInfo {
   id: string; name: string; hash: string; size: number; mime: string; source: Source;
   importedAt: string; sheets: { name: string; rows: number; treatment: string }[];
@@ -43,6 +46,7 @@ export interface State {
   references?:HistoricalReference[];
   lastValidation?:ValidationRun;
   importRulesVersion?:number;
+  wooSyncs?: WooSync[];
 }
 export const emptyState = (): State => ({ version: 0, initialized: false, documents: [], movements: [], products: [], audit: [], unavailable: {}, lossKeywords: ['Crypto'],references:[] });
 export const CATEGORIES: Category[] = ['DRY_SNUFF', 'MAPACHO'];
@@ -59,4 +63,6 @@ export const SOURCES: { key: Source; label: string; description: string; require
   { key: 'loss', label: 'Perdas / Crypto', description: 'Invoices de perdas que reduzem o estoque.', required: true },
   { key: 'products', label: 'Cadastro de produtos', description: 'SKU, categoria e peso unitário em gramas.', required: false },
 ];
+export const SITE_SOURCES: Source[] = ['sacred','haux','natural'];
+export const MANUAL_SOURCES = SOURCES.filter(s=>!SITE_SOURCES.includes(s.key));
 export const MONTHS = ['Janeiro', 'Fevereiro', 'Março', 'Abril', 'Maio', 'Junho', 'Julho', 'Agosto', 'Setembro', 'Outubro', 'Novembro', 'Dezembro'];
