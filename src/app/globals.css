@@ -57,3 +57,7 @@
 @media(max-width:1180px){.woo-controls{grid-template-columns:1fr 1fr}.woo-heading{flex-wrap:wrap}}
 @media(max-width:750px){.collection-tabs{grid-template-columns:1fr}.collection-tabs>button{padding:16px}.woo-panel{padding:20px}.woo-stores{grid-template-columns:1fr}.report-shortcuts{grid-template-columns:1fr}.woo-connection-notice{flex-direction:column;align-items:flex-start}.woo-controls{padding:16px}.report-shortcut{padding:20px}.collection-tabs small{font-size:14px}.connection-count{white-space:normal}.stock-disclosure .opening-cards{grid-template-columns:1fr}}
 @media(max-width:450px){.woo-controls{grid-template-columns:1fr}.woo-controls input,.woo-controls select{min-width:0}.woo-heading h2{font-size:22px}.report-shortcut>svg{display:none}}
+
+/* Visible month and delivery-state controls in movement reports. */
+.filters{align-items:flex-end}.ledger-filter{display:flex;flex-direction:column;gap:6px;min-width:150px}.ledger-filter>span{font-size:12px;font-weight:600;color:var(--muted)}.ledger-filter select{width:100%;max-width:240px}
+@media(max-width:680px){.ledger-filter{flex:1;min-width:140px}.ledger-filter select{max-width:none}}

@@ -4,7 +4,7 @@ import { emptyState, type DocumentInfo } from '../src/lib/model';
 import { normalizeOrders, applyWoo, collectWoo, syncSchema, type SyncInput } from '../src/server/woocommerce';
 import { salesBySize, excludedNational } from '../src/lib/sales';
 import { salesCoverage } from '../src/lib/sales-cover';
-import { buildReports, defaultFilters } from '../src/lib/reports';
+import { buildReports, defaultFilters, filtered } from '../src/lib/reports';
 import { clearDocuments } from '../src/server/clear-documents';
 
 const input:SyncInput={source:'sacred' as const,start:'2026-11-01',end:'2026-11-30',statuses:['completed' as const]};
@@ -138,4 +138,17 @@ test('default import counts processing and completed orders and excludes unpaid 
  const movements=normalizeOrders(orders,[],new Map(),emptyState(),defaults,doc());
  assert.deepEqual(movements.map(m=>m.order),['1','2']);
  assert.equal(movements.reduce((sum,m)=>sum+(m.quantity||0),0),6);
+});
+
+test('outgoing combines month and normalized delivery state, including country precedence',()=>{
+ const state=emptyState();applyWoo(state,capture([order(),order(2,'CA'),order(3,'FL','BR')],state));
+ const original=state.movements[0];
+ state.movements.push({...original,id:'old-month',date:'2026-10-05'}, {...original,id:'full-state',state:'Florida'});
+ const filters={...defaultFilters,month:'11',state:'FL'};
+ assert.deepEqual(filtered(state.movements,filters).map(m=>m.id),[original.id,'full-state']);
+ assert.equal(filtered(state.movements,{...filters,month:'10'}).length,1);
+ assert.equal(filtered(state.movements,{...filters,state:'CA'}).length,1);
+ assert.equal(filtered(state.movements,{...filters,state:'Exterior'}).length,1);
+ const report=buildReports(state,filters).outgoing;
+ assert.equal(report.rows.length,2);
 });

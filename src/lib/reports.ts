@@ -5,7 +5,7 @@ import { normalizeState } from './shipping';
 import { historyComparisons, REFERENCE_LABEL } from './history';
 export interface Filters {year:number;month:string;category:string;search:string;state:string;site:string;kind:string;source:string;status:string}
 export const defaultFilters:Filters={year:2026,month:'',category:'',search:'',state:'',site:'',kind:'',source:'',status:''};
-export function filtered(movements:Movement[],f:Filters) {return movements.filter(m=>(!f.year||m.date.startsWith(String(f.year)))&&(!f.month||m.date.slice(5,7)===f.month)&&(!f.category||m.category===f.category)&&(!f.search||[m.customer,m.recipient,m.invoice,m.order,m.sku].join(' ').toLowerCase().includes(f.search.toLowerCase()))&&(!f.state||m.state.toLowerCase()===f.state.toLowerCase())&&(!f.site||m.site===f.site)&&(!f.kind||m.kind===f.kind)&&(!f.source||m.origins.some(o=>o.source===f.source))&&(!f.status||m.status===f.status));}
+export function filtered(movements:Movement[],f:Filters) {return movements.filter(m=>(!f.year||m.date.startsWith(String(f.year)))&&(!f.month||m.date.slice(5,7)===f.month)&&(!f.category||m.category===f.category)&&(!f.search||[m.customer,m.recipient,m.invoice,m.order,m.sku].join(' ').toLowerCase().includes(f.search.toLowerCase()))&&(!f.state||normalizeState(m.state,m.shippingCountry)===normalizeState(f.state))&&(!f.site||m.site===f.site)&&(!f.kind||m.kind===f.kind)&&(!f.source||m.origins.some(o=>o.source===f.source))&&(!f.status||m.status===f.status));}
 export interface Report {title:string;columns:string[];rows:(string|number|null)[][]}
 export function floridaRows(movements:Movement[],category:Category) {
   const grouped=new Map<string, {date:string;units:Record<string,number>;kg:number;missing:number;records:Movement[]}>();
